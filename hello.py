@@ -3,7 +3,6 @@ from flask import Flask
 import configparser
 
 # api keys are in config.ini to keep them out of github
-
 config = configparser.ConfigParser()
 config.read('config.ini')
 try:
@@ -19,9 +18,9 @@ except KeyError:
 
 app = Flask(__name__)
 
-@app.route('/')
-def index():
-    return 'Index Page, i.e this is the <h2>index page </h2>'
+@app.route('/', methods=['GET'])
+def handle_verification():
+    return request.args['hub.challenge']
 
 @app.route('/hello')
 def hello():
