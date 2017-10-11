@@ -28,6 +28,7 @@ def handle_verification():
 # handle incoming messages and reply to them
 @app.route('/', methods=['POST'])
 def handle_incoming_messages():
+    print("incoming message handling started")
     data = request.json
     msg = data['entry'][0]['messaging'][0]
 
@@ -35,10 +36,28 @@ def handle_incoming_messages():
     recipient_id = msg["recipient"]["id"]   # our page id
     message_text = msg['message']['text']   # txt of msg
 
+    # send is_typing msg
+    is_typing(sender_id)
+
     print("---printing the data we get from facebook---")
     print(data)
 
+    # how do we send to fb a code so user gets the ... sign that typing is happening
+
+    # put code here to make sense of the nlp dict
+    # extract datetime, intent and so on from the nlp
+
+    # then use the intent to call the relevant function
+    # have a dict which maps intent to function
+
+    # so we have called a function, now make a text string from it
+    # or maybe to function itself returns a text string?
+    # since each function will have a diff kind of string
+
+    # so now we have have a text string to send to user,
+    # so we can call the reply function which posts it 
     reply(sender_id, message_text[::-1])
+    
     return "ok", 200
 
 def reply(user_id, msg):
@@ -55,6 +74,15 @@ def reply(user_id, msg):
     print(resp.content)
     print(msg, "msg sent")
 
+def is_typing(user_id):
+    """sends a is typing msg to user_id"""
+    data = {
+        "recipient": {"id": user_id},
+        "sender_action": "typing_on"
+    }
+    post_url = "https://graph.facebook.com/v2.6/me/messages?access_token=" + PAGE_ACCESS_TOKEN
+    resp = requests.post(post_url, json=data)
+    
 # to ab able to eyeball if the server is up and running on the interwebs
 @app.route('/hello')
 def hello():
