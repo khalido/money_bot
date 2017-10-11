@@ -20,10 +20,22 @@ print(VERIFY_TOKEN)
 app = Flask(__name__)
 
 # handle verification from fb to authenticate the app
+
+# just bounce back verification token without checking
+#@app.route('/', methods=['GET'])
+#def handle_verification():
+#    return request.args['hub.challenge']
+
+# the better way to handle verification
+# but check if this works
 @app.route('/', methods=['GET'])
 def handle_verification():
-    return request.args['hub.challenge']
-
+    if (request.args['hub.verify_token'] == VERIFY_TOKEN):
+        print("Verified")
+        return request.args['hub.challenge']
+    else:
+        print("Wrong token")
+        return "Error, wrong validation token"
 
 # handle incoming messages and reply to them
 @app.route('/', methods=['POST'])
@@ -42,7 +54,6 @@ def handle_incoming_messages():
     print("---printing the data we get from facebook---")
     print(data)
 
-    # how do we send to fb a code so user gets the ... sign that typing is happening
 
     # put code here to make sense of the nlp dict
     # extract datetime, intent and so on from the nlp
@@ -71,7 +82,7 @@ def reply(user_id, msg):
     resp = requests.post(post_url, json=data)
     
     print("---"*10)
-    print(resp.content)
+    #print(resp.content)
     print(msg, "msg sent")
 
 def is_typing(user_id):
