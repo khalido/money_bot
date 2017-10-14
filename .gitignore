@@ -1,6 +1,9 @@
 # ignore config file
 config.ini
 
+# don't upload .csv files
+*.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
