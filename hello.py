@@ -157,31 +157,58 @@ def hello():
 
 # raw csv file from pocketbook for testing
 data = pd.read_csv("data/pocketbook-export.csv")
+data['date'] = data['date'].apply(pd.to_datetime)
 
 def cost_of(user_id, nlp, when=None, date_grain=None):
     """sends cost of category to the user in a msg"""
     print("spending loop actually entered")
 
-    what = nlp['search_query']
-    if "datetime" in nlp.keys():
-        when = nlp['datetime']
-    if "date_grain" in nlp.keys():
-        date_grain = nlp["date_grain"]
-
+    if "search_query" in nlp.keys():
+        what = nlp['search_query']
+    else:
+        msg = f"NLP error, can't detect your search query, pls try something else"
+        reply(user_id, msg)
+        return
+    
+    # dealing with dates
+    date_convert = {"day": "D", "week": "W", "month":"M", "year":"A"}
+    
+    if "datetime" and "date_grain" in nlp.keys():
+        when = pd.to_datetime(nlp['datetime'])
+        date_grain = date_convert[nlp["date_grain"]]
+        date_period = when.to_period(date_grain)
+    else:
+        date = None
+        nlp['date_grain'] = "All"
+        date_period = "All"
+    
     # ignoring the date for now
     if what in data.category.values:
-        # ideally filter by date here
-        total_spend = -data[data.category.values == what]["amount"].sum()
+        df = data[data.category.values == what].copy()
+        df.amount = df['amount'].apply(abs)
         
-        # lets tell the user how much was spent on this category
-        msg = f"you spent ${total_spend:.2f} on {what}"
-        reply(user_id, msg)
+        # ideally filter by date here
+        if date is not None:
+            mask = (df.date >= date_period.start_time) & \
+                    (df.date <= date_period.end_time)
+            df2 = df[mask]
+        else:
+            df2 = df
+            
+        # now calculate total spend 
+        total_spend = df2["amount"].sum()
 
+        # lets tell the user how much was spent on this category
+        msg = f"you spent {total_spend:.2f} on {what} \
+                during {nlp['date_grain']} {date_period}"
+        reply(user_id, msg)
+        
         # lets plot something
-        plt.clf()       # clear current figure if it exists
-        plt.plot(data[data.category.values == what]["amount"])
-        plt.title("Spending on " + what)
+        df2.plot.bar(x="date", y="amount")
+        #plt.plot(data[data.Category.values == what]["amount"])
+        plt.title(f"Spending on {what} during {nlp['date_grain']} {date_period}")
         plt.xlabel("Dates"), plt.ylabel("Dollars")
+
         image_name = user_id + "test.png"
         plt.savefig("static/" + image_name)
 
@@ -195,7 +222,7 @@ def cost_of(user_id, nlp, when=None, date_grain=None):
         reply(user_id, image_url=url)
 
     else: # dealing for when the users category isn't found
-        msg = f"Can't find {when} in your transactions, pls try something else"
+        msg = f"Can't find {what} in your transactions, pls try something else"
         reply(user_id, msg)
 
 def get_place_info(query="Aldi Broadway", country = "Australia"):
@@ -223,7 +250,7 @@ def get_place_info(query="Aldi Broadway", country = "Australia"):
     info["types"] = place['types']
     return info 
 
-queries = ["aldi", "rebel sports", "chemist", "coles"]
+queries = ["aldi broadway", "rebel sports", "chemist", "coles"]
 places_info = {q.lower(): get_place_info(q) for q in queries}
 
 # to make a nice dataframe of the places dict
