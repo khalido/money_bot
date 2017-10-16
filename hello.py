@@ -182,7 +182,7 @@ def cost_of(user_id, nlp, when=None, date_grain=None):
         nlp['date_grain'] = "All"
         date_period = "All"
     
-    # ignoring the date for now
+    # filtering by date
     if what in data.category.values:
         df = data[data.category.values == what].copy()
         df.amount = df['amount'].apply(abs)
