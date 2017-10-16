@@ -9,9 +9,13 @@ from flask import Flask, request, send_from_directory
 import requests
 import configparser
 import boto3
+import csv
 
 # keep track of the last msg received to handle duplicate msgs from fB
 last_msg_id = "None at the moment"
+
+# dictionary to store place info
+places_info = {}
 
 # api keys are in config.ini to keep them out of github
 config = configparser.ConfigParser()
@@ -193,7 +197,38 @@ def cost_of(user_id, nlp, when=None, date_grain=None):
     else: # dealing for when the users category isn't found
         msg = f"Can't find {when} in your transactions, pls try something else"
         reply(user_id, msg)
-        
+
+def get_place_info(query="Aldi Broadway", country = "Australia"):
+    """takes in a text and returns a google place lookup"""
     
+    # return from dict if already looked this up
+    if query.lower() in places_info:
+        print("returning from dict")
+        return places_info[query.lower()]
+    
+    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    payload= {"query": query+" "+country, "key": PLACES_API}
+    r = requests.get(url, params=payload)
+    
+    if r.json()["results"] != []:
+        place = r.json()["results"][0]
+    else:
+        print("Returned no result")
+        return None
+    
+    r = {}
+    r["address"] = place['formatted_address']
+    r["location"] = place['geometry']['location']
+    r["place_id"] = place['place_id']
+    r["types"] = place['types']
+
+    return r  
+
+queries = ["aldi", "rebel sports", "chemist", "coles"]
+places_info = {q.lower(): get_place_info(q) for q in queries}
+
+# to make a nice dataframe of the places dict
+#places_info_df = pd.DataFrame.from_dict(places_info, orient="index")
+ 
 if __name__ == "__main__":
     app.run()
