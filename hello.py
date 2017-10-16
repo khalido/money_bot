@@ -206,6 +206,8 @@ def get_place_info(query="Aldi Broadway", country = "Australia"):
         print("returning from dict")
         return places_info[query.lower()]
     
+    info = {"address": 0, "location":0, "place_id":0, "types":0}
+    
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     payload= {"query": query+" "+country, "key": PLACES_API}
     r = requests.get(url, params=payload)
@@ -213,16 +215,13 @@ def get_place_info(query="Aldi Broadway", country = "Australia"):
     if r.json()["results"] != []:
         place = r.json()["results"][0]
     else:
-        print("Returned no result")
-        return None
+        return info
     
-    r = {}
-    r["address"] = place['formatted_address']
-    r["location"] = place['geometry']['location']
-    r["place_id"] = place['place_id']
-    r["types"] = place['types']
-
-    return r  
+    info["address"] = place['formatted_address']
+    info["location"] = place['geometry']['location']
+    info["place_id"] = place['place_id']
+    info["types"] = place['types']
+    return info 
 
 queries = ["aldi", "rebel sports", "chemist", "coles"]
 places_info = {q.lower(): get_place_info(q) for q in queries}
