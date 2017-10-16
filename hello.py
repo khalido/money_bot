@@ -26,14 +26,12 @@ except KeyError:
     print("Missing keys in the config.ini file")
 
 # to upload files for serving images to fb
-s3 = boto3.client(
-    's3',
-    aws_access_key_id=aws_access_key_id,
-    aws_secret_access_key=aws_secret_access_key,
-    )
+# boto3.resource is a high-level object-oriented API
+s3 = boto3.resource('s3', 
+                    aws_access_key_id=aws_access_key_id, 
+                    aws_secret_access_key=aws_secret_access_key)
 
 # the webby stuff, powered by flask
-
 app = Flask(__name__)
 
 # handle verification challange from fb to authenticate the app
@@ -107,7 +105,7 @@ def reply(user_id, msg=None, image_url=None):
         data = {'recipient': {'id': '1718968874810833'}, 
                 'message': {'attachment': 
                 {'type': 'image', 
-                'payload': {'url': image_url_test }}}}
+                'payload': {'url': image_url }}}}
     else:
         data = {"recipient": {"id": user_id}, 
                 "message": {"text": msg}}
@@ -153,13 +151,14 @@ def cost_of(user_id, what, when=None):
         image_name = "test.png"
         plt.savefig("static/" + image_name)
 
-        s3.upload_file("static/test.png", "paisabot", aws_access_key_id)
-        
-        # Generate the URL to get 'key-name' from 'bucket-name'
-        url = s3.generate_presigned_url(ClientMethod='get_object', 
-                    Params={'Bucket': 'paisabot', 
-                    'Key': image_name})
+        # upload image to aws s3
+        img_data = open("static/" + image_name, "rb")
+        s3.Bucket("paisabot").put_object(Key=image_name, Body=img_data, 
+                                ContentType="image/png", ACL="public-read")
 
+        # Generate the URL to get 'key-name' from 'bucket-name'
+        url = "http://paisabot.s3.amazonaws.com/" + image_name
+        
         reply(user_id, image_url=url)
 
     else: # dealing for when the users category isn't found
