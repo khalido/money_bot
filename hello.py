@@ -170,7 +170,7 @@ def cost_of(user_id, nlp, when=None, date_grain=None):
         total_spend = -data[data.category.values == what]["amount"].sum()
         
         # lets tell the user how much was spent on this category
-        msg = f"you spent {total_spend:.2f} at {what}"
+        msg = f"you spent ${total_spend:.2f} on {what}"
         reply(user_id, msg)
 
         # lets plot something
