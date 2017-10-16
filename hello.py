@@ -148,7 +148,7 @@ def cost_of(user_id, what, when=None):
         plt.plot(data[data.category.values == what]["amount"])
         plt.title("Spending on" + what)
         plt.xlabel("Dates"), plt.ylabel("Dollars")
-        image_name = "test.png"
+        image_name = user_id + "test.png"
         plt.savefig("static/" + image_name)
 
         # upload image to aws s3
