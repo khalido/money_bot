@@ -10,6 +10,7 @@ import requests
 import configparser
 import boto3
 import csv
+import feedparser
 
 # keep track of the last msg received to handle duplicate msgs from fB
 last_msg_id = "None at the moment"
@@ -178,7 +179,6 @@ def cost_of(user_id, nlp, when=None, date_grain=None):
         date_grain = date_convert[nlp["date_grain"]]
         date_period = when.to_period(date_grain)
     else:
-        date = None
         nlp['date_grain'] = "All"
         date_period = "All"
     
@@ -188,7 +188,7 @@ def cost_of(user_id, nlp, when=None, date_grain=None):
         df.amount = df['amount'].apply(abs)
         
         # ideally filter by date here
-        if date is not None:
+        if when is not None:
             mask = (df.date >= date_period.start_time) & \
                     (df.date <= date_period.end_time)
             df2 = df[mask]
