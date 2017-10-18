@@ -1,4 +1,5 @@
 SERVER_URL = "http://8ecdd1ab.ngrok.io"
+VERBOSE = True
 
 import pandas as pd
 import numpy as np
@@ -11,6 +12,8 @@ import configparser
 import boto3
 import csv
 import feedparser
+
+import utils
 
 # keep track of the last msg received to handle duplicate msgs from fB
 last_msg_id = "None at the moment"
@@ -88,38 +91,48 @@ def handle_incoming_messages():
 
     # check what kind of msg it is
     if 'attachments' in msg['message'].keys():
-        print("image attached")
-        reply(sender_id, "You sent an attachment, sadly we can't do anything with that")
-        reply(sender_id, "Try asking a question, like `how much did I spend on Groceries last month?`")
+        if msg['message']['attachments'][0]['type'] == 'file':
+            print("----file received----")
+            reply(sender_id, "Attachment received, trying to parse it")
+            file_url = msg['message']['attachments'][0]['payload']['url']
+            file_name = utils.deal_with_file(sender_id, file_url)
+            if file_name:
+                utils.new_csv(sender_id, file_name)
+            else:
+                reply(sender_id, "couldn't download your file, try again")
+        else:
+            reply(sender_id, "Attachment received, can't deal with it, the bot can only deal with transactional data in .csv files for now")  
+            reply(sender_id, "Try asking a question, like `how much did I spend on Groceries last month?`")
         # do nothing for now
         return "ok", 200
     else:
         message_text = msg['message']['text']   # txt of msg
         nlp_json = msg["message"]["nlp"]['entities'] # nlp parsed dict
         
-        # put code here to make sense of the nlp dict
-        # extract datetime, intent and so on from the nlp
-
-        nlp = {}
+        nlp = {} # simplified nlp dict
         for key in nlp_json.keys():
             nlp[key] = nlp_json[key][0]["value"]
             nlp[key+"_confidence"] = nlp_json[key][0]["confidence"]
             if key == "datetime":
                 nlp["date_grain"] = nlp_json[key][0]["grain"]
     
-    # end of if/else loop
+    if VERBOSE:
+        # echo msg back for debugging
+        reply(sender_id, "your msg was: " + message_text)
+        # send NLP dict for debugging
+        reply(sender_id, str(nlp))
 
-    # use the intent in the nlp to call the relevant function
-    # ideally have a dict which maps intent to function
+    # open users existing csv data into a dataframe
+    print("trying to open the users csv file into a dataframe")
+    data = utils.open_user_csv(sender_id)
 
-    # messages to check what msg we got
-    reply(sender_id, "your msg was: " + message_text)
-    #reply(sender_id, "parsing your msg:")
-    reply(sender_id, str(nlp))
+    if data is None:
+        reply(sender_id, "We don't have any data for you yet, pls upload a csv file of your transactions")
+        return "ok", 200
 
     # main if/else loop to make sense of different kinds of intents
     if nlp["intent"] == "spend":
-        cost_of(sender_id, nlp)
+        cost_of(sender_id, nlp, data)
         print("and we are back from the spending loop")
     else:
         reply(sender_id, "Try asking a question, like `how much did I spend on Groceries last month?`")
@@ -156,11 +169,8 @@ def hello():
     print("the hello function ran")
     return "<h1> Testing this Hello World biz</H1>. Yes indeed this server is up."
 
-# raw csv file from pocketbook for testing
-data = pd.read_csv("data/pocketbook-export.csv")
-data['date'] = data['date'].apply(pd.to_datetime)
 
-def cost_of(user_id, nlp, when=None, date_grain=None):
+def cost_of(user_id, nlp, data, when=None, date_grain=None):
     """sends cost of category to the user in a msg"""
     print("spending loop actually entered")
 
