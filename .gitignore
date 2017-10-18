@@ -2,7 +2,7 @@
 config.ini
 
 # don't upload pocketbook or .pkl files
-pocket*
+pocketbook-export*
 *.pkl
 
 # Byte-compiled / optimized / DLL files
