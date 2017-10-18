@@ -4,6 +4,7 @@ config.ini
 # don't upload pocketbook or .pkl files
 pocketbook-export*
 *.pkl
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

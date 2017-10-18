@@ -45,17 +45,18 @@ def new_csv(sender_id, file_name, file_url, bank=None):
     #open existing user exists
     df_old = open_user_csv(sender_id)
 
-    if df_old:
+    if isinstance(df_old, pd.DataFrame):
         # https://pandas.pydata.org/pandas-docs/stable/merging.html
         df = df_new.append(df_old, ignore_index=True)
+        msg = f"Parsed {df_new.shape[0]} transactions and added to to the existing {df_old.shape[0]} transactions"
     else:
         df = df_new
+        msg = f"Parsed {df.shape[0]} transactions from your uploaded csv"
 
-    # save to disk
-        
+    # save to disk  
     df.to_pickle("data/" + sender_id + ".pkl")
-
-    return df_new.shape[0]
+    
+    return msg
 
 
 def parse_df(df, bank):
@@ -68,12 +69,13 @@ def parse_df(df, bank):
         drop_cols = ["notes", "tags", "bank", "accountname", "accountnumber", "category"]
         data.drop(drop_cols, inplace=True, axis=1)
         data['date'] = data['date'].apply(pd.to_datetime)
+        data["Category"] = data["Category"].astype(str).str.lower()
+        data["Subcategory"] = data["Subcategory"].astype(str).str.lower()
     else:
         print("Don't have a parser for this kind of csv file")
         return df
     
     print(f"parsed file with {bank} parser")
-    print(data.dtypes)
     return data
 
 def open_user_csv(sender_id, df=None):
@@ -83,7 +85,7 @@ def open_user_csv(sender_id, df=None):
     if os.path.isfile(file_name):
         print("file found")
         df = pd.read_pickle(file_name)
-        print(f"---users file found and opened---")
+        print(f"---users file found and opened, has shape {df.shape}---")
     else:
         print("----no existing csv file found-----")
     return df

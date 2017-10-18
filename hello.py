@@ -97,8 +97,8 @@ def handle_incoming_messages():
             file_url = msg['message']['attachments'][0]['payload']['url']
             file_name = utils.deal_with_file(sender_id, file_url)
             if file_name:
-                csv_rows = utils.new_csv(sender_id, file_name, file_url)
-                reply(sender_id, f"sucessfully dealt with {csv_rows} rows.")
+                msg = utils.new_csv(sender_id, file_name, file_url)
+                reply(sender_id, msg)
             else:
                 reply(sender_id, "couldn't download your file, try again")
         else:
@@ -177,7 +177,7 @@ def cost_of(user_id, nlp, data, when=None, date_grain=None):
     print("spending loop actually entered")
 
     if "search_query" in nlp.keys():
-        what = nlp['search_query']
+        what = nlp['search_query'].lower()
     else:
         msg = f"NLP error, can't detect your search query, pls try something else"
         reply(user_id, msg)
@@ -195,7 +195,7 @@ def cost_of(user_id, nlp, data, when=None, date_grain=None):
         date_period = "All"
     
     # filtering by date
-    if what in data.Category.values:
+    if what in data.Category.str.lower().values:
         df = data[data.Category.values == what].copy()
         df.amount = df['amount'].apply(abs)
         
@@ -206,19 +206,19 @@ def cost_of(user_id, nlp, data, when=None, date_grain=None):
             df2 = df[mask]
         else:
             df2 = df
-        print(df2)    
+            
         # now calculate total spend 
         total_spend = df2["amount"].sum()
 
         # lets tell the user how much was spent on this category
-        msg = f"you spent {total_spend:.2f} on {what} during {nlp['date_grain']} {date_period}"
+        msg = f"you spent {total_spend:.2f} on {what.capitalize()} during {date_period}"
         reply(user_id, msg)
         
         # lets plot something
         if total_spend != 0:
             df2.plot.bar(x="date", y="amount")
             #plt.plot(data[data.Category.values == what]["amount"])
-            plt.title(f"Spending on {what} during {nlp['date_grain']} {date_period}")
+            plt.title(f"Spending on {what.capitalize()} during {date_period}")
             plt.xlabel("Dates"), plt.ylabel("Dollars")
 
             image_name = user_id + "test.png"
