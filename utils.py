@@ -30,13 +30,17 @@ def deal_with_file(sender_id, file_url, file_name=None):
     
     return file_name
 
-def new_csv(sender_id, file_name):
-    """takes a newly downloaded csv file, parses it and appends it to a users existing csv if it exists"""
+def new_csv(sender_id, file_name, file_url, bank=None):
+    """takes a newly downloaded csv file, parses it and appends it to a users existing csv if it exists
+    """
     
+    # check what kind of csv file this is
+    if re.search("pocketbook-export", file_url):
+        bank = "pocketbook"
+
     # parse csv here to convert it into our default df format
-    df_new = parse_df(pd.read_csv(file_name))
-    
-    # do_stuff to clean up this new df
+    df_new = parse_df(pd.read_csv(file_name), bank)
+    # later on, delete this new csv file after dealing with it
     
     #open existing user exists
     df_old = open_user_csv(sender_id)
@@ -46,23 +50,39 @@ def new_csv(sender_id, file_name):
         df = df_new.append(df_old, ignore_index=True)
     else:
         df = df_new
+
+    # save to disk
         
-    df.to_csv("data/" + sender_id + ".csv")
+    df.to_pickle("data/" + sender_id + ".pkl")
+
+    return df_new.shape[0]
 
 
-def parse_df(df):
+def parse_df(df, bank):
     """takes in a a unparsed df and transforms it into our final version
     this function is only called for new csv files"""
 
-    return df
+    if bank == "pocketbook":
+        data = df.join(df.category.str.split(" - ", expand=True))
+        data.rename(columns={0: "Category", 1: "Subcategory"}, inplace=True)
+        drop_cols = ["notes", "tags", "bank", "accountname", "accountnumber", "category"]
+        data.drop(drop_cols, inplace=True, axis=1)
+        data['date'] = data['date'].apply(pd.to_datetime)
+    else:
+        print("Don't have a parser for this kind of csv file")
+        return df
+    
+    print(f"parsed file with {bank} parser")
+    print(data.dtypes)
+    return data
 
 def open_user_csv(sender_id, df=None):
     """takes a sender_id and returns that users dataframe if it exists"""
     
-    file_name = "data/" + sender_id + ".csv"
+    file_name = "data/" + sender_id + ".pkl"
     if os.path.isfile(file_name):
         print("file found")
-        df = pd.read_csv(file_name)
+        df = pd.read_pickle(file_name)
         print(f"---users file found and opened---")
     else:
         print("----no existing csv file found-----")

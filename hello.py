@@ -97,7 +97,8 @@ def handle_incoming_messages():
             file_url = msg['message']['attachments'][0]['payload']['url']
             file_name = utils.deal_with_file(sender_id, file_url)
             if file_name:
-                utils.new_csv(sender_id, file_name)
+                csv_rows = utils.new_csv(sender_id, file_name, file_url)
+                reply(sender_id, f"sucessfully dealt with {csv_rows} rows.")
             else:
                 reply(sender_id, "couldn't download your file, try again")
         else:
@@ -132,6 +133,7 @@ def handle_incoming_messages():
 
     # main if/else loop to make sense of different kinds of intents
     if nlp["intent"] == "spend":
+        print("entering spending function")
         cost_of(sender_id, nlp, data)
         print("and we are back from the spending loop")
     else:
@@ -193,43 +195,43 @@ def cost_of(user_id, nlp, data, when=None, date_grain=None):
         date_period = "All"
     
     # filtering by date
-    if what in data.category.values:
-        df = data[data.category.values == what].copy()
+    if what in data.Category.values:
+        df = data[data.Category.values == what].copy()
         df.amount = df['amount'].apply(abs)
         
         # ideally filter by date here
-        if when is not None:
+        if when is not None and date_period is not "All":
             mask = (df.date >= date_period.start_time) & \
                     (df.date <= date_period.end_time)
             df2 = df[mask]
         else:
             df2 = df
-            
+        print(df2)    
         # now calculate total spend 
         total_spend = df2["amount"].sum()
 
         # lets tell the user how much was spent on this category
-        msg = f"you spent {total_spend:.2f} on {what} \
-                during {nlp['date_grain']} {date_period}"
+        msg = f"you spent {total_spend:.2f} on {what} during {nlp['date_grain']} {date_period}"
         reply(user_id, msg)
         
         # lets plot something
-        df2.plot.bar(x="date", y="amount")
-        #plt.plot(data[data.Category.values == what]["amount"])
-        plt.title(f"Spending on {what} during {nlp['date_grain']} {date_period}")
-        plt.xlabel("Dates"), plt.ylabel("Dollars")
+        if total_spend != 0:
+            df2.plot.bar(x="date", y="amount")
+            #plt.plot(data[data.Category.values == what]["amount"])
+            plt.title(f"Spending on {what} during {nlp['date_grain']} {date_period}")
+            plt.xlabel("Dates"), plt.ylabel("Dollars")
 
-        image_name = user_id + "test.png"
-        plt.savefig("static/" + image_name)
+            image_name = user_id + "test.png"
+            plt.savefig("static/" + image_name)
 
-        # upload image to aws s3
-        img_data = open("static/" + image_name, "rb")
-        s3.Bucket("paisabot").put_object(Key=image_name, Body=img_data, 
-                                ContentType="image/png", ACL="public-read")
+            # upload image to aws s3
+            img_data = open("static/" + image_name, "rb")
+            s3.Bucket("paisabot").put_object(Key=image_name, Body=img_data, 
+                                    ContentType="image/png", ACL="public-read")
 
-        # Generate the URL to send to facebook and send msg
-        url = "http://paisabot.s3.amazonaws.com/" + image_name
-        reply(user_id, image_url=url)
+            # Generate the URL to send to facebook and send msg
+            url = "http://paisabot.s3.amazonaws.com/" + image_name
+            reply(user_id, image_url=url)
 
     else: # dealing for when the users category isn't found
         msg = f"Can't find {what} in your transactions, pls try something else"

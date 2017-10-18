@@ -1,8 +1,9 @@
 # ignore config file
 config.ini
 
-# don't upload pocketbook files
+# don't upload pocketbook or .pkl files
 pocket*
+*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
