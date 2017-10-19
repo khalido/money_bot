@@ -126,7 +126,7 @@ def handle_incoming_messages():
 
     # open users existing csv data into a dataframe
     print("trying to open the users csv file into a dataframe")
-    data = utils.open_user_csv(sender_id)
+    data = utils.open_user_file(sender_id)
 
     if data is None:
         reply(sender_id, "We don't have any data for you yet, pls upload a csv file of your transactions")

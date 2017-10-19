@@ -37,13 +37,15 @@ def new_csv(sender_id, file_name, file_url, bank=None):
     # check what kind of csv file this is
     if re.search("pocketbook-export", file_url):
         bank = "pocketbook"
+    else:
+        bank = "typical"
 
     # parse csv here to convert it into our default df format
-    df_new = parse_df(pd.read_csv(file_name), bank)
+    df_new = parse_csv(file_name, bank)
     # later on, delete this new csv file after dealing with it
     
     #open existing user exists
-    df_old = open_user_csv(sender_id)
+    df_old = open_user_file(sender_id)
 
     if isinstance(df_old, pd.DataFrame):
         # https://pandas.pydata.org/pandas-docs/stable/merging.html
@@ -58,30 +60,37 @@ def new_csv(sender_id, file_name, file_url, bank=None):
     
     return msg
 
-
-def parse_df(df, bank=None):
-    """takes in a a unparsed df and transforms it into our final version
+def parse_csv(file_name, bank=None):
+    """takes in a csv and transforms it into our final version
     this function is only called for new csv files"""
 
     if bank == "pocketbook":
-        data = df.join(df.category.str.split(" - ", expand=True))
-        data.rename(columns={0: "Category", 1: "Subcategory"}, inplace=True)
+        df = pd.read_csv(file_name)
+        df = df.join(df.category.str.split(" - ", expand=True))
         drop_cols = ["notes", "tags", "bank", "accountname", "accountnumber", "category"]
-        data.drop(drop_cols, inplace=True, axis=1)
-        data['date'] = data['date'].apply(pd.to_datetime)
-        data["Category"] = data["Category"].astype(str).str.lower()
-        data["Subcategory"] = data["Subcategory"].astype(str).str.lower()
-    elif bank="bendigo":
+        df.drop(drop_cols, inplace=True, axis=1)
+        df.rename(columns={0: "category", 1: "subcategory"}, inplace=True)
+        
+    elif bank == "typical":
         col_names = ["date", "amount", "description"]
-        data = pd.read_csv("data/transactions.csv", header=None, names=col_names)
+        df = pd.read_csv("data/transactions.csv", header=None, names=col_names)
+        df['category'] = np.NaN
+
     else:
         print("Don't have a parser for this kind of csv file")
         return df
     
-    print(f"parsed file with {bank} parser")
-    return data
+    # following applies to all
+    #df["category"] = df["category"].astype(str).str.lower()
+    df['date'] = df['date'].apply(pd.to_datetime)
+    df['temp'] = df['description'].apply(split_suburb, args=(bank,))
+    df[["merchant", "suburb", "deal_with_later"]] = pd.DataFrame(df.temp.str.split("@@", expand=True))
+    df.drop("temp", axis=1, inplace=True)
 
-def open_user_csv(sender_id, df=None):
+    print(f"parsed file with {bank} parser")
+    return df
+
+def open_user_file(sender_id, df=None):
     """takes a sender_id and returns that users dataframe if it exists"""
     
     file_name = "data/" + sender_id + ".pkl"
@@ -93,16 +102,18 @@ def open_user_csv(sender_id, df=None):
         print("----no existing csv file found-----")
     return df
 
-def split_suburb(description):
+def split_suburb(description, bank):
     """takes in a discription and returns a string with
-    `@@` seperator b/w merchant and suburb and deletes the bit after suburb. Run by:
-    df['temp'] = df['description'].apply(suburb)
-    after running split suburb, use a line like: 
-    df[["merchant", "suburb"]] = pd.DataFrame(df.temp.str.split("@@", expand=True))
-    to split your new temp column into two, then delete the temp col
-    """
+    `@@` seperator b/w merchant and suburb and deletes the bit after suburb"""
     wrds = description.split()
     if len(wrds) > 2 and not wrds[-3].isdigit():
-        return " ".join(wrds[:-3])[:-1] + "@@" + wrds[-3]
+        if bank == "pocketbook":
+            return " ".join(wrds[:-2]) + "@@" + wrds[-2] + "@@" + wrds[-1]
+        else:
+            return " ".join(wrds[:-3])[:-1] + "@@" + wrds[-3] + "@@" + wrds[-1]
+    
+    if len(wrds) > 1:
+        return " ".join(wrds) + "@@None@@None"
     else:
-        return [0, 0]
+        return [0, 0, 0]
+
