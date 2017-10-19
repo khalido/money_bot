@@ -17,6 +17,7 @@ import utils
 
 # keep track of the last msg received to handle duplicate msgs from fB
 last_msg_id = "None at the moment"
+last_msg_intent = "None"
 
 # dictionary to store place info
 places_info = {}

@@ -59,7 +59,7 @@ def new_csv(sender_id, file_name, file_url, bank=None):
     return msg
 
 
-def parse_df(df, bank):
+def parse_df(df, bank=None):
     """takes in a a unparsed df and transforms it into our final version
     this function is only called for new csv files"""
 
@@ -71,6 +71,9 @@ def parse_df(df, bank):
         data['date'] = data['date'].apply(pd.to_datetime)
         data["Category"] = data["Category"].astype(str).str.lower()
         data["Subcategory"] = data["Subcategory"].astype(str).str.lower()
+    elif bank="bendigo":
+        col_names = ["date", "amount", "description"]
+        data = pd.read_csv("data/transactions.csv", header=None, names=col_names)
     else:
         print("Don't have a parser for this kind of csv file")
         return df
@@ -89,3 +92,17 @@ def open_user_csv(sender_id, df=None):
     else:
         print("----no existing csv file found-----")
     return df
+
+def split_suburb(description):
+    """takes in a discription and returns a string with
+    `@@` seperator b/w merchant and suburb and deletes the bit after suburb. Run by:
+    df['temp'] = df['description'].apply(suburb)
+    after running split suburb, use a line like: 
+    df[["merchant", "suburb"]] = pd.DataFrame(df.temp.str.split("@@", expand=True))
+    to split your new temp column into two, then delete the temp col
+    """
+    wrds = description.split()
+    if len(wrds) > 2 and not wrds[-3].isdigit():
+        return " ".join(wrds[:-3])[:-1] + "@@" + wrds[-3]
+    else:
+        return [0, 0]
