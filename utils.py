@@ -70,6 +70,7 @@ def parse_csv(file_name, bank=None):
         drop_cols = ["notes", "tags", "bank", "accountname", "accountnumber", "category"]
         df.drop(drop_cols, inplace=True, axis=1)
         df.rename(columns={0: "category", 1: "subcategory"}, inplace=True)
+        df.category = df.category.str.lower()
         
     elif bank == "typical":
         col_names = ["date", "amount", "description"]
@@ -117,3 +118,47 @@ def split_suburb(description, bank):
     else:
         return [0, 0, 0]
 
+def filter_date_and_cat(nlp, data, what, when, date_grain):
+    """takes in a dataframe and a nlp dict and returns a df filtered
+    by category and date range"""
+
+    print("df filter loop received date in shape: ", data.shape)
+    # dealing with dates
+    date_convert = {"day": "D", "week": "W", "month":"M", "year":"A"}
+    
+    if "datetime" and "date_grain" in nlp.keys():
+        when = pd.to_datetime(nlp['datetime'])
+        date_grain = date_convert[nlp["date_grain"]]
+        date_period = when.to_period(date_grain)
+    else:
+        nlp['date_grain'] = "All"
+        date_period = "All"
+    
+    # filtering by category first, doesn't filter if cat not found
+    categories = list(set(data.category.astype(str).apply(str.lower).values))
+    if what in categories: print(f"found {what} in cats")
+    
+    if what != "spend":
+        print("filtering by category...")
+        df = data[data.category == what].copy()
+    else:
+        df = data
+    
+    print("--df shape is now---")
+    print(df.shape)
+        
+    # filtering by date now
+    if when is not None and date_period is not "All":
+        mask = (df.date >= date_period.start_time) & \
+                (df.date <= date_period.end_time)
+        print('masked df by date')
+        df2 = df[mask].copy()
+    else:
+        df2 = df
+
+    print("--df2 shape is now---")
+    print(df2.shape)
+    
+    # converting numbers to abs for easier plotting
+    df2.amount = df2['amount'].apply(abs)
+    return df2, date_period

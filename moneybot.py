@@ -136,7 +136,7 @@ def handle_incoming_messages():
     if 'intent' in nlp.keys():
         intent = nlp['intent']
         if intent == "spend":
-            cost_of(sender_id, nlp, data)
+            intent_spend(sender_id, nlp, data)
         elif intent == "savings":
             intent_savings(sender_id, nlp, data)
         elif intent == "income":
@@ -186,8 +186,10 @@ def hello():
     print("the hello function ran")
     return "<h1> Testing this Hello World biz</H1>. Yes indeed this server is up."
 
+# the functions which deal with different intents start here
+# ideally they also have a 'state', so they can
 
-def intent_is_savings(user_id, nlp, data, when=None, date_grain=None):
+def intent_savings(user_id, nlp, data, when=None, date_grain=None):
     """sends savings details to the user in a msg"""
     print("---savings intent entered---")
 
@@ -196,70 +198,52 @@ def intent_is_savings(user_id, nlp, data, when=None, date_grain=None):
     reply(user_id, msg)
 
 
-def cost_of(user_id, nlp, data, when=None, date_grain=None):
+def intent_spend(user_id, nlp, data, when=None, date_grain=None, what=None):
     """sends cost of category to the user in a msg"""
     print("spending loop actually entered")
 
     if "search_query" in nlp.keys():
         what = nlp['search_query'].lower()
+    elif what =="spend":
+        pass
     else:
         msg = f"NLP error, can't detect your search query, pls try something else"
         reply(user_id, msg)
         return
     
-    # dealing with dates
-    date_convert = {"day": "D", "week": "W", "month":"M", "year":"A"}
-    
-    if "datetime" and "date_grain" in nlp.keys():
-        when = pd.to_datetime(nlp['datetime'])
-        date_grain = date_convert[nlp["date_grain"]]
-        date_period = when.to_period(date_grain)
-    else:
-        nlp['date_grain'] = "All"
-        date_period = "All"
-    
-    # filtering by date
-    if what in data.Category.str.lower().values:
-        df = data[data.Category.values == what].copy()
-        df.amount = df['amount'].apply(abs)
+    df2, date_period = utils.filter_date_and_cat(nlp, data, what, when, date_grain)
         
-        # ideally filter by date here
-        if when is not None and date_period is not "All":
-            mask = (df.date >= date_period.start_time) & \
-                    (df.date <= date_period.end_time)
-            df2 = df[mask]
-        else:
-            df2 = df
-            
-        # now calculate total spend 
-        total_spend = df2["amount"].sum()
+    # now calculate total spend 
+    total_spend = df2["amount"].sum()
 
-        # lets tell the user how much was spent on this category
+    # lets tell the user how much was spent
+    if what and what != "spend":
         msg = f"you spent {total_spend:.2f} on {what.capitalize()} during {date_period}"
-        reply(user_id, msg)
-        
-        # lets plot something
-        if total_spend != 0:
-            df2.plot.bar(x="date", y="amount")
-            #plt.plot(data[data.Category.values == what]["amount"])
-            plt.title(f"Spending on {what.capitalize()} during {date_period}")
-            plt.xlabel("Dates"), plt.ylabel("Dollars")
+    elif what == "spend":
+        msg = f"you spent {total_spend:.2f} on all the things during {date_period}"
+    else:
+        msg = f"you spent {total_spend:.2f} on during {date_period}"
+    reply(user_id, msg)
+    
+    # lets plot something
+    if total_spend != 0:
+        df2.plot.bar(x="date", y="amount")
+        if what == "spend": what = "all the things"
+        plt.title(f"Spending on {what.capitalize()} during {date_period}")
+        plt.xlabel("Dates"), plt.ylabel("Dollars")
 
-            image_name = user_id + "test.png"
-            plt.savefig("static/" + image_name)
+        image_name = user_id + "test.png"
+        plt.savefig("static/" + image_name)
 
-            # upload image to aws s3
-            img_data = open("static/" + image_name, "rb")
-            s3.Bucket("paisabot").put_object(Key=image_name, Body=img_data, 
-                                    ContentType="image/png", ACL="public-read")
+        # upload image to aws s3
+        img_data = open("static/" + image_name, "rb")
+        s3.Bucket("paisabot").put_object(Key=image_name, Body=img_data, 
+                                ContentType="image/png", ACL="public-read")
 
-            # Generate the URL to send to facebook and send msg
-            url = "http://paisabot.s3.amazonaws.com/" + image_name
-            reply(user_id, image_url=url)
+        # Generate the URL to send to facebook and send msg
+        url = "http://paisabot.s3.amazonaws.com/" + image_name
+        reply(user_id, image_url=url)
 
-    else: # dealing for when the users category isn't found
-        msg = f"Can't find {what} in your transactions, pls try something else"
-        reply(user_id, msg)
 
 def get_place_info(query="Aldi Broadway", country = "Australia"):
     """takes in a text and returns a google place lookup"""
