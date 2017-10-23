@@ -2,7 +2,7 @@ footer: TeamKernel, 2017
 
 # moneybot
 
-moneybot, it see's your moneys
+conversational interface to your finances
 
 ## by #teamkernel
 
@@ -39,11 +39,9 @@ features, features, features![^1]
 
 - used word2vec and sklearn classifiers
 - turns out the big guys use yellow pages and humans
-
-# we need something here guys
+- we used a number of algos from sklearn
 
 [^1]: ok, maybe not so many
-
 
 ---
 

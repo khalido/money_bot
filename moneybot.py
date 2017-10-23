@@ -4,6 +4,7 @@ VERBOSE = True
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import requests
 from flask import Flask, request, send_from_directory
@@ -196,6 +197,35 @@ def intent_savings(user_id, nlp, data, when=None, date_grain=None):
     # lets tell the user how much was spent on this category
     msg = f"you saved X during DATE_PERIOD... this function isn't on yet so check back later"
     reply(user_id, msg)
+
+
+def intent_overview(user_id, nlp, data, when=None, date_grain=None, what="spend"):
+    """sends a pic of spending categoryto the user in a msg"""
+    print("---overview intent entered---")
+
+    df, date_period = utils.filter_date_and_cat(nlp, data, what, when, date_grain)
+
+    #df = df[df.amount<=0]
+    #df.amount = df['amount'].apply(abs)
+    mask = df.category != "transferring money"
+    sns.barplot(x="category", y="amount",data=df[mask])
+
+    # lets tell the user how much was spent on this category
+    msg = f"calculating..."
+    reply(user_id, msg)
+
+    image_name = user_id + "overview.png"
+    plt.savefig("static/" + image_name)
+
+    # upload image to aws s3
+    img_data = open("static/" + image_name, "rb")
+    s3.Bucket("paisabot").put_object(Key=image_name, Body=img_data, 
+                            ContentType="image/png", ACL="public-read")
+
+    # Generate the URL to send to facebook and send msg
+    url = "http://paisabot.s3.amazonaws.com/" + image_name
+    reply(user_id, image_url=url)
+
 
 
 def intent_spend(user_id, nlp, data, when=None, date_grain=None, what=None):
