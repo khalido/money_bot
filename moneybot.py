@@ -300,8 +300,8 @@ def get_place_info(query="Aldi Broadway", country = "Australia"):
     info["types"] = place['types']
     return info 
 
-queries = ["aldi broadway", "rebel sports", "chemist", "coles"]
-places_info = {q.lower(): get_place_info(q) for q in queries}
+#queries = ["aldi broadway", "rebel sports", "chemist", "coles"]
+#places_info = {q.lower(): get_place_info(q) for q in queries}
 
 # to make a nice dataframe of the places dict
 #places_info_df = pd.DataFrame.from_dict(places_info, orient="index")

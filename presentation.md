@@ -14,7 +14,46 @@ conversational interface to your finances
 
 ## know my spending habits
 
-my bank and apps like pocketbook to which i'm subscribed to since 2012 don't do a good enough job.
+my bank and apps like pocketbook tdon't do a good enough job.
+
+---
+
+## know thy incoming data
+
+![left, fit](static/bank_detect_classify.png)
+
+---
+
+# automated parsing
+
+![left](static/bank detect.png)
+
+---
+
+# transaction classification > 80%
+
+![fill, inline](static/classifier.png)
+
+---
+
+# why does my bank suck at classifying my transactions?
+
+features, features, features![^1]
+
+- used word2vec and sklearn to classify
+- turns out the big guys use yellow pages and humans
+- we used a number of algos from sklearn
+
+[^1]: ok, maybe not so many
+
+---
+
+# need NLP to understand text
+
+![inline](static/ai_xkcd.png)
+
+- we're using facebook's wit.ai engine to parse text
+- fb AI promises the world, but needs a lot of work [^fb]
 
 ---
 
@@ -24,24 +63,11 @@ moneybot, where art thou?
 
 ---
 
-# need ai
+# handle more intents in the future
 
-![inline](static/ai_xkcd.png)
+### by using a LSTM NN to connect incoming intents to actions with memory
 
-- we're using facebook's wit.ai engine to parse text
-- it's pretty incomplete, needs many things
-
----
-
-# why does my bank suck at classifying my transactions?
-
-features, features, features![^1]
-
-- used word2vec and sklearn classifiers
-- turns out the big guys use yellow pages and humans
-- we used a number of algos from sklearn
-
-[^1]: ok, maybe not so many
+![fit](static/if_else_intent.png)
 
 ---
 
@@ -51,4 +77,4 @@ of course, a few years from now...
 
 ---
 
-# [fit] questions
+# [fit] questions?
